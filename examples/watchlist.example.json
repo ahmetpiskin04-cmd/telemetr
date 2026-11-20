@@ -1,0 +1,10 @@
+{
+  "stocks": [
+    { "symbol": "THYAO", "name": "Türk Hava Yolları" },
+    { "symbol": "ASELS", "name": "Aselsan" },
+    { "symbol": "GARAN", "name": "Garanti BBVA" },
+    { "symbol": "TUPRS", "name": "Tüpraş" }
+  ],
+  "metals": ["GRAM_ALTIN", "GRAM_GUMUS"],
+  "funds": ["AFT", "TTE", "IPB"]
+}

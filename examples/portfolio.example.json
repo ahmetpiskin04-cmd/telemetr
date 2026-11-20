@@ -1,0 +1,11 @@
+{
+  "cash": 15000,
+  "positions": [
+    { "symbol": "THYAO", "quantity": 100, "avgCost": 280 },
+    { "symbol": "GRAM_ALTIN", "quantity": 12, "avgCost": 6200 },
+    { "symbol": "AFT", "quantity": 20000, "avgCost": 0.85 }
+  ],
+  "aliases": {
+    "THYAO": ["THY", "Türk Hava Yolları"]
+  }
+}

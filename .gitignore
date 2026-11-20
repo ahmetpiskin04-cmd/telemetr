@@ -1,0 +1,6 @@
+.env
+data/
+dist/
+build/
+node_modules/
+release/
