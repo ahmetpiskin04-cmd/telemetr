@@ -16,6 +16,7 @@
     "sync": "node --disable-warning=ExperimentalWarning scripts/sync.js",
     "seed": "node --disable-warning=ExperimentalWarning scripts/seed.js",
     "analyze": "node --disable-warning=ExperimentalWarning scripts/analyze.js",
+    "alarm:test": "node --disable-warning=ExperimentalWarning scripts/alarm-simulate.js",
     "ai": "node --disable-warning=ExperimentalWarning --env-file-if-exists=%USERPROFILE%\\.evim\\telemetr.env --env-file-if-exists=.env scripts/ai-report.js",
     "test": "node --disable-warning=ExperimentalWarning --test",
     "dist:dir": "vite build && electron-builder --win dir",

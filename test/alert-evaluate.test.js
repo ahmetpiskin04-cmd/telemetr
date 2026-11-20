@@ -220,7 +220,7 @@ test('ons altın bildirimi "(vadeli)" der; kur 4 ondalıkla yazılır', () => {
 test('gecikmeli BİST verisinde bildirime "gecikmeli veri" notu eklenir', () => {
   let a = below385();
   ({ alarm: a } = step(a, px(390, { delayed: true })));
-  assert.equal(step(a, px(380.1, { delayed: true })).notification.text, 'BIMAS 380,10 TL: belirlediğin 385 TL alarmının altına indi. (gecikmeli veri)');
+  assert.equal(step(a, px(380.1, { delayed: true })).notification.text, 'BIMAS 380,10 TL: belirlediğin 385 TL alarmının altına indi (gecikmeli veri).');
 });
 
 // ---- portföy zarar sınırı ------------------------------------------------------------------------
