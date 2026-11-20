@@ -150,6 +150,19 @@ test('onChange: kayıt ve tur sonrası arayüze haber verilir', async () => {
   assert.deepEqual(events.map((e) => e.type), ['changed', 'run']);
 });
 
+test('günlük: her kontrol turu tek satırla özetlenir; alarm yokken satır yazılmaz', async () => {
+  const { service, dir, state } = await setup();
+  await service.runNow();
+  assert.equal(existsSync(path.join(dir, 'alerts.log')), false, 'sırada alarm yok: günlük boş');
+
+  state.current = { BIMAS: quote('BIMAS', 390) };
+  await service.save({ type: 'price', symbol: 'BIMAS', direction: 'below', threshold: 385 });
+  await service.save({ type: 'price', symbol: 'GRAM_ALTIN', direction: 'above', threshold: 6300 }); // fiyat yok: atlanır
+  await service.runNow();
+  const text = await readFile(path.join(dir, 'alerts.log'), 'utf8');
+  assert.match(text, /Kontrol turu: 2 alarm sırada, 1 değerlendirildi, 1 atlandı \(veri yok\), 0 tetiklendi/);
+});
+
 test('günlük dosyası: satır ekler, 512 KB üstünde devreder, yazılamazsa sessiz kalır', async () => {
   const dir = await mkdtemp(path.join(tmpdir(), 'telemetr-log-'));
   const file = path.join(dir, 'alerts.log');

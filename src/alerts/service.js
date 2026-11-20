@@ -72,6 +72,10 @@ export function createAlertService({
   async function runNow() {
     const summary = await runner.runOnce();
     if (!summary.skipped) lastRun = { at: now().toISOString(), ...summary };
+    // Başarılı turlar da günlüğe yazılır: "alarm gerçekten kontrol ediliyor mu?" sorusu dosyadan yanıtlanır
+    if (!summary.skipped && !summary.error && summary.checked > 0) {
+      log(`Kontrol turu: ${summary.checked} alarm sırada, ${summary.evaluated} değerlendirildi, ${summary.checked - summary.evaluated} atlandı (veri yok), ${summary.triggered} tetiklendi`);
+    }
     onChange({ type: 'run', summary: lastRun });
     return lastRun;
   }
