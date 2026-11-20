@@ -1,4 +1,4 @@
-import { ChartCandlestick, FlaskConical } from 'lucide-react';
+import { Bell, ChartCandlestick, FlaskConical } from 'lucide-react';
 import { fmtMoney, fmtPct, tone, TYPE_LABELS } from '../../lib/format.js';
 import { Badge } from '../ui/Badge.jsx';
 import { Segmented } from '../ui/EmptyState.jsx';
@@ -54,7 +54,7 @@ const MODES = [
   { id: 'detailed', label: 'Detaylı' },
 ];
 
-export function TopBar({ overview, sync, mode, onModeChange }) {
+export function TopBar({ overview, sync, mode, onModeChange, onOpenAlerts }) {
   const facts = overview?.portfolio.facts ?? {};
   const hasSample = overview?.assets.some((a) => a.dataIsSample);
   const hasAmounts = facts.totalValue != null;
@@ -97,6 +97,14 @@ export function TopBar({ overview, sync, mode, onModeChange }) {
           </Badge>
         )}
         <Segmented label="Görünüm" options={MODES} value={mode} onChange={onModeChange} />
+        <button
+          type="button"
+          onClick={onOpenAlerts}
+          className="flex items-center gap-2 rounded-lg border border-line-strong bg-surface-2 px-3 py-1.5 text-sm font-medium text-fg-strong transition-colors duration-150 hover:bg-surface-3"
+        >
+          <Bell size={15} aria-hidden="true" />
+          Alarmlar
+        </button>
         <SyncStatus sync={sync} />
       </div>
     </div>

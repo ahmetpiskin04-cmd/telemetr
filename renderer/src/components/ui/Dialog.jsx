@@ -5,7 +5,7 @@ import { X } from 'lucide-react';
  * Yerleşik <dialog> üzerine ince sarmalayıcı: showModal() odak hapsi, Esc ile kapanma ve
  * arka planı engelleme davranışını tarayıcıdan hazır alır.
  */
-export function Dialog({ open, onClose, title, children, footer }) {
+export function Dialog({ open, onClose, title, children, footer, wide = false }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -22,18 +22,18 @@ export function Dialog({ open, onClose, title, children, footer }) {
         e.preventDefault(); // Esc: kapanışı React durumu üzerinden yap
         onClose();
       }}
-      className="m-auto w-[420px] max-w-[calc(100vw-32px)] rounded-2xl border border-line bg-surface-1 p-0 text-fg shadow-2xl backdrop:bg-black/60"
+      className={`m-auto ${wide ? 'w-[860px]' : 'w-[420px]'} max-w-[calc(100vw-32px)] rounded-2xl border border-line bg-surface-1 p-0 text-fg shadow-2xl backdrop:bg-black/60`}
     >
       {open && (
-        <div className="flex flex-col">
-          <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
+        <div className="flex max-h-[calc(100vh-48px)] flex-col">
+          <div className="flex shrink-0 items-center justify-between border-b border-line px-5 py-3.5">
             <h2 className="text-base font-semibold text-fg-strong">{title}</h2>
             <button type="button" onClick={onClose} aria-label="Kapat" className="rounded-md p-1 text-fg-dim transition-colors duration-150 hover:bg-surface-2 hover:text-fg">
               <X size={18} />
             </button>
           </div>
-          <div className="flex flex-col gap-4 px-5 py-4">{children}</div>
-          {footer && <div className="flex items-center justify-end gap-2 border-t border-line px-5 py-3.5">{footer}</div>}
+          <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-5 py-4">{children}</div>
+          {footer && <div className="flex shrink-0 items-center justify-end gap-2 border-t border-line px-5 py-3.5">{footer}</div>}
         </div>
       )}
     </dialog>

@@ -11,6 +11,7 @@ import { AiPanel } from './components/ai/AiPanel.jsx';
 import { EmptyState } from './components/ui/EmptyState.jsx';
 import { AddAssetDialog } from './components/portfolio/AddAssetDialog.jsx';
 import { PositionDialog } from './components/portfolio/PositionDialog.jsx';
+import { AlertsDialog } from './components/alerts/AlertsDialog.jsx';
 
 /** Basit / Detaylı görünüm; seçim bu bilgisayarda hatırlanır (yalnızca kolaylık, veri değil). */
 function useViewMode() {
@@ -54,7 +55,7 @@ export default function App() {
   const [selected, setSelected] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [mode, setMode] = useViewMode();
-  const [dialog, setDialog] = useState(null); // 'add' | 'position' | null
+  const [dialog, setDialog] = useState(null); // 'add' | 'position' | 'alerts' | null
 
   const assets = overview.data?.assets ?? [];
   const symbols = orderedSymbols(assets);
@@ -91,13 +92,14 @@ export default function App() {
   return (
     <>
     <DashboardLayout
-      top={<TopBar overview={overview.data} sync={sync} mode={mode} onModeChange={setMode} />}
+      top={<TopBar overview={overview.data} sync={sync} mode={mode} onModeChange={setMode} onOpenAlerts={() => setDialog('alerts')} />}
       left={<Watchlist assets={assets} selected={symbol} onSelect={setSelected} onAdd={() => setDialog('add')} />}
       main={main}
       right={<AiPanel report={report} symbols={symbols} onSelectSymbol={setSelected} mode={mode} />}
     />
     {/* Yeni varlık: geçmişi güncelleme bitince listeye düşer, o zaman seçili olur */}
     <AddAssetDialog open={dialog === 'add'} onClose={() => setDialog(null)} onAdded={(s) => setSelected(s)} />
+    <AlertsDialog open={dialog === 'alerts'} onClose={() => setDialog(null)} />
     <PositionDialog
       asset={asset}
       open={dialog === 'position'}
