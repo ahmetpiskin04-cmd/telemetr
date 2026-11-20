@@ -16,6 +16,16 @@ export const api = {
   addAsset: (asset) => call('addAsset', asset),
   savePosition: (position) => call('savePosition', position),
   removeAsset: (symbol) => call('removeAsset', symbol),
+  alertsOverview: () => call('alertsOverview'),
+  alertsSave: (alarm) => call('alertsSave', alarm),
+  alertsDelete: (id) => call('alertsDelete', id),
+  alertsToggle: (id, enabled) => call('alertsToggle', id, enabled),
+  alertsSettings: (patch) => call('alertsSettings', patch),
+  alertsAssetAdd: (symbol) => call('alertsAssetAdd', symbol),
+  alertsAssetRemove: (symbol) => call('alertsAssetRemove', symbol),
+  alertsTest: () => call('alertsTest'),
+  alertsRun: () => call('alertsRun'),
+  onAlertsEvent: (callback) => window.finans?.onAlertsEvent?.(callback) ?? (() => {}),
   // Eski preload ile (ana süreç yeniden başlatılmadan) çalışırken çökmesin
   onSyncEvent: (callback) => window.finans?.onSyncEvent?.(callback) ?? (() => {}),
 };

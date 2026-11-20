@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import './paths.js'; // ipc.js'ten önce: paketli sürümde veri yollarını ortam değişkenine yazar
 import { registerIpc } from './ipc.js';
+import { registerAlertsIpc } from './alerts-ipc.js';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const DEV_URL = process.env.VITE_DEV_SERVER_URL;
@@ -102,10 +103,27 @@ function createWindow() {
 // Otomatik veri güncelleme aralığı (dakika). 0 = kapalı; ekran görüntüsü modunda kapalı.
 const SYNC_MINUTES = process.env.FINANS_SCREENSHOT ? 0 : Number(process.env.FINANS_SYNC_MINUTES ?? 60);
 
+// Alarm kontrolü: ekran görüntüsü modunda ya da FINANS_ALERTS=0 ile kapalı
+const ALERTS_ENABLED = !process.env.FINANS_SCREENSHOT && process.env.FINANS_ALERTS !== '0';
+
+/** Pencereyi (gizliyse) öne getirir. */
+function showMainWindow() {
+  const [win] = BrowserWindow.getAllWindows();
+  if (!win) return createWindow();
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+}
+
 app.whenReady().then(() => {
-  const { startSyncLoop } = registerIpc({ allowedOrigin: DEV_URL ? new URL(DEV_URL).origin : 'file://' });
+  app.setAppUserModelId('com.telemetr.app'); // Windows bildirimlerinin uygulama adıyla görünmesi için
+  const allowedOrigin = DEV_URL ? new URL(DEV_URL).origin : 'file://';
+  const { startSyncLoop, db } = registerIpc({ allowedOrigin });
+  const alerts = registerAlertsIpc({ allowedOrigin, db, onNotifyClick: showMainWindow });
   createWindow();
   startSyncLoop(SYNC_MINUTES);
+  if (ALERTS_ENABLED) alerts.start();
+  app.on('before-quit', () => alerts.stop());
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });

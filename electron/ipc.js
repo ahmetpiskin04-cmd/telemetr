@@ -49,6 +49,21 @@ const broadcast = (channel, payload) => {
   for (const win of BrowserWindow.getAllWindows()) win.webContents.send(channel, payload);
 };
 
+/** Kanalları kaydeder: yalnızca uygulamanın kendi arayüzünden gelen çağrılar kabul edilir, hatalar zarfa sarılır. */
+export function registerHandlers(handlers, allowedOrigin) {
+  for (const [channel, handler] of Object.entries(handlers)) {
+    ipcMain.handle(channel, async (event, ...args) => {
+      const origin = event.senderFrame?.url ?? '';
+      if (!origin.startsWith(allowedOrigin)) return { ok: false, error: 'Yetkisiz kaynak' };
+      try {
+        return { ok: true, data: await handler(...args) };
+      } catch (err) {
+        return { ok: false, error: err.message };
+      }
+    });
+  }
+}
+
 export function registerIpc({ allowedOrigin }) {
   const db = openDatabase();
   let generating = null; // aynı anda tek rapor üretimi
@@ -135,17 +150,7 @@ export function registerIpc({ allowedOrigin }) {
     },
   };
 
-  for (const [channel, handler] of Object.entries(handlers)) {
-    ipcMain.handle(channel, async (event, ...args) => {
-      const origin = event.senderFrame?.url ?? '';
-      if (!origin.startsWith(allowedOrigin)) return { ok: false, error: 'Yetkisiz kaynak' };
-      try {
-        return { ok: true, data: await handler(...args) };
-      } catch (err) {
-        return { ok: false, error: err.message };
-      }
-    });
-  }
+  registerHandlers(handlers, allowedOrigin);
 
   /**
    * Arka plan güncelleme döngüsü: açılışta veri `intervalMinutes`'tan eskiyse hemen,
@@ -163,5 +168,5 @@ export function registerIpc({ allowedOrigin }) {
     return () => clearInterval(timer);
   }
 
-  return { startSyncLoop };
+  return { startSyncLoop, db };
 }
