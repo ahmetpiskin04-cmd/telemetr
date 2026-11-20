@@ -12,4 +12,5 @@ if (app.isPackaged) {
   process.env.FINANS_WATCHLIST ??= path.join(dataDir, 'watchlist.json');
   process.env.FINANS_PORTFOLIO ??= path.join(dataDir, 'portfolio.json');
   process.env.FINANS_REPORTS_DIR ??= path.join(dataDir, 'reports');
+  process.env.FINANS_ALARMS ??= path.join(dataDir, 'alarms.json');
 }

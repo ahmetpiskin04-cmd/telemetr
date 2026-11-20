@@ -29,7 +29,7 @@ async function readJson(file, fallback) {
   return JSON.parse(await readFile(file, 'utf8'));
 }
 
-async function writeJsonAtomic(file, data) {
+export async function writeJsonAtomic(file, data) {
   await mkdir(path.dirname(file), { recursive: true });
   const tmp = `${file}.tmp`;
   await writeFile(tmp, `${JSON.stringify(data, null, 2)}\n`);
