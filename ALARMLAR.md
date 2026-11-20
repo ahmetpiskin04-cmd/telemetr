@@ -44,7 +44,9 @@ Borsa verisi gecikmeliyse cümlenin sonuna "(gecikmeli veri)" eklenir.
 - **Bekleme süresi** (varsayılan 24 saat): aynı alarm bu süre dolmadan tekrar çalmaz. Zarar sınırında uyarıdan "aşıldı"ya geçiş bekleme süresine takılmaz.
 - **Tek seferlik** alarm bir kez çalınca kendini kapatır. Zarar sınırında yalnızca "aşıldı" uyarısından sonra kapanır.
 - **Seans:** BİST hisseleri yalnızca hafta içi 10:00-18:00 (İstanbul) kontrol edilir; Yahoo borsanın açık olmadığını söylüyorsa (resmî tatil) bildirmez. Altın ve döviz her zaman kontrol edilir. Kontrol aralığı Ayarlar'dan değişir (varsayılan 5 dakika).
-- **Veri alınamazsa** alarm sessizce atlanır, uygulama çökmez. Hatalar `data/alerts.log` dosyasına yazılır (paketli sürümde `%APPDATA%\telemetr\data\alerts.log`).
+- **Veri alınamazsa** alarm sessizce atlanır, uygulama çökmez. Gram altın fiyatı Harem'den geldiği ve Harem arada sessiz kaldığı için, fiyat gelmezse aynı turda 2 kez daha denenir (her deneme en fazla 30 saniye).
+- **Veri kaynağı uyarısı:** Harem ya da Yahoo art arda 6 tur (yaklaşık 30 dakika) hiç cevap vermezse Windows ve Telegram'a "… verisi alınamıyor, alarm çalışmıyor olabilir." uyarısı gider. Kaynak başına 24 saatte en fazla bir kez; uygulamayı yeniden başlatmak bu sınırı sıfırlamaz (`data/source-health.json`).
+- **Günlük:** `data/alerts.log` dosyası hataları ve sırada alarm olan her kontrol turunun özetini ("Kontrol turu: N alarm sırada, M değerlendirildi, K atlandı…") yazar; böylece alarmların gerçekten kontrol edildiği görülür. Paketli sürümde yol `%APPDATA%\telemetr\data\alerts.log`.
 
 ## Ayarlar (hepsi Ayarlar sekmesinde, kodda sabit değil)
 
