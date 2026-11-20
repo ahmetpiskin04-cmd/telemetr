@@ -9,6 +9,9 @@ import { getRecentPrices } from '../repository.js';
 
 const DAY_MS = 86_400_000;
 const HISTORY_CACHE_MS = 30 * 60_000;
+// Harem yalnızca fiyat değişince mesaj atar; sessiz kaldığı anlarda tek denemede fiyat gelmeyebiliyor
+const HAREM_ATTEMPTS = 3;
+const HAREM_TIMEOUT_MS = 30_000;
 
 /** BİST dışı izlenebilen varlıklar. BİST hisseleri kod biçiminden tanınır. */
 export const SPECIAL_ASSETS = Object.freeze({
@@ -43,8 +46,22 @@ export function createPriceFeed({
   db = null,
   now = () => new Date(),
   log = () => {},
+  haremAttempts = HAREM_ATTEMPTS, // ilk deneme + 2 yeniden deneme
+  haremTimeoutMs = HAREM_TIMEOUT_MS,
+  haremRetryDelayMs = 1_000,
+  onSource = () => {}, // ({ source, requested, received }): kaynak sağlığı takibi için
 } = {}) {
   const historyCache = new Map(); // "SEMBOL:adet" -> { at, closes }
+
+  /** Kaynak sağlığı bildirimi; takip kodu hata verse de fiyat akışı etkilenmez. */
+  const report = (source, requested, received) => {
+    try {
+      onSource({ source, requested, received });
+    } catch (err) {
+      log(`Kaynak sağlığı kaydedilemedi: ${err.message}`);
+    }
+  };
+  const countReceived = (entries, out) => entries.filter((e) => out.get(e.symbol)).length;
 
   async function yahooQuotes(entries, out) {
     try {
@@ -77,14 +94,26 @@ export function createPriceFeed({
     } catch (err) {
       log(`Yahoo fiyat hatası (${entries.map((e) => e.symbol).join(', ')}): ${err.message}`);
     }
+    report('yahoo', entries.length, countReceived(entries, out));
   }
 
   async function haremEntries(entries, out) {
-    let quotes;
-    try {
-      quotes = await haremQuotes([...new Set(entries.map((e) => e.haremCode))]);
-    } catch (err) {
-      log(`Harem fiyat hatası: ${err.message}`);
+    const codes = [...new Set(entries.map((e) => e.haremCode))];
+    let quotes = null;
+    let lastError;
+    for (let attempt = 1; attempt <= haremAttempts; attempt += 1) {
+      try {
+        quotes = await haremQuotes(codes, { timeoutMs: haremTimeoutMs });
+        break;
+      } catch (err) {
+        lastError = err;
+        log(`Harem denemesi ${attempt}/${haremAttempts} başarısız: ${err.message}`);
+        if (attempt < haremAttempts && haremRetryDelayMs > 0) await new Promise((resolve) => setTimeout(resolve, haremRetryDelayMs));
+      }
+    }
+    if (!quotes) {
+      log(`Harem fiyat hatası (${haremAttempts} denemeden sonra): ${lastError?.message}`);
+      report('harem', entries.length, 0);
       return;
     }
     for (const entry of entries) {
@@ -116,6 +145,7 @@ export function createPriceFeed({
         timeZone: 'Europe/Istanbul',
       });
     }
+    report('harem', entries.length, countReceived(entries, out));
   }
 
   /** Map<sembol, Quote|null>: istenen her sembol için bir giriş vardır. */

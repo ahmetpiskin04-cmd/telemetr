@@ -3,6 +3,7 @@
 // Arayüz katmanı (electron/alerts-ipc.js) yalnızca bu nesnenin metotlarını çağırır.
 import path from 'node:path';
 import { alarmStatusText } from './evaluate.js';
+import { createSourceHealth } from './health.js';
 import { createLogger } from './logger.js';
 import { createNotifier, getTelegramConfig } from './notifier.js';
 import { createPriceFeed, resolveAsset } from './price-feed.js';
@@ -33,14 +34,35 @@ export function createAlertService({
   env = process.env,
   fetchImpl,
   feed,
+  yahoo, // test için sahte Yahoo istemcisi
+  haremQuotes, // test için sahte Harem
+  haremRetryDelayMs,
   now = () => new Date(),
   logFile = path.join(path.dirname(file), 'alerts.log'),
   firstDelayMs = 20_000,
   onChange = () => {},
 } = {}) {
   const log = createLogger(logFile, { echo: Boolean(env.FINANS_ALERT_DEBUG) });
-  const priceFeed = feed ?? createPriceFeed({ db, log, now });
   const notify = createNotifier({ desktop, env, fetchImpl, log });
+  // Bir kaynak art arda 6 tur cevap vermezse (günde en fazla bir kez) bildirimle uyarır
+  const health = createSourceHealth({
+    file: path.join(path.dirname(file), 'source-health.json'),
+    notify,
+    getSettings: async () => (await readAlarmsFile(file)).settings,
+    now,
+    log,
+  });
+  const priceFeed =
+    feed ??
+    createPriceFeed({
+      db,
+      log,
+      now,
+      onSource: health.onSource,
+      ...(yahoo && { yahoo }),
+      ...(haremQuotes && { haremQuotes }),
+      ...(haremRetryDelayMs !== undefined && { haremRetryDelayMs }),
+    });
   const runner = createAlertRunner({ feed: priceFeed, notify, file, portfolioFile, watchlistFile, now, log });
 
   let loop = null;

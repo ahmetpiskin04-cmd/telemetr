@@ -109,7 +109,7 @@ test('getQuotes: Harem çökerse yalnızca altın null olur, Yahoo varlıkları 
   const haremQuotes = async () => {
     throw new Error('soket kapandı');
   };
-  const quotes = await createPriceFeed({ yahoo, haremQuotes, now: () => NOW }).getQuotes(['GRAM_ALTIN', 'USDTRY']);
+  const quotes = await createPriceFeed({ yahoo, haremQuotes, now: () => NOW, haremRetryDelayMs: 0 }).getQuotes(['GRAM_ALTIN', 'USDTRY']);
   assert.equal(quotes.get('GRAM_ALTIN'), null);
   assert.equal(quotes.get('USDTRY').price, 50.5);
 });
@@ -145,4 +145,62 @@ test('getDailyCloses: gram altın geçmişi veritabanından gelir', async () => 
   const closes = await createPriceFeed({ yahoo: fakeYahoo(), db, now: () => NOW }).getDailyCloses('GRAM_ALTIN', 20);
   assert.equal(closes.length, 20);
   assert.equal(closes.at(-1), 5023, 'bugünün satırı (5024) hariç');
+});
+
+const haremOk = new Map([['ALTIN', { code: 'ALTIN', bid: 6000, ask: 6010, mid: 6005, date: '2026-11-20', time: '12:00:00' }]]);
+
+test('Harem: fiyat gelmezse aynı turda 2 kez daha denenir ve 30 sn bekleme süresi iletilir', async () => {
+  const calls = [];
+  const logs = [];
+  const haremQuotes = async (codes, options) => {
+    calls.push(options);
+    if (calls.length < 3) throw new Error('Harem: süre içinde kotasyon gelmedi');
+    return haremOk;
+  };
+  const reports = [];
+  const feed = createPriceFeed({ yahoo: fakeYahoo(), haremQuotes, now: () => NOW, haremRetryDelayMs: 0, log: (m) => logs.push(m), onSource: (r) => reports.push(r) });
+  const quotes = await feed.getQuotes(['GRAM_ALTIN']);
+  assert.equal(quotes.get('GRAM_ALTIN').price, 6005, 'üçüncü denemede fiyat geldi');
+  assert.equal(calls.length, 3);
+  assert.ok(calls.every((o) => o.timeoutMs === 30_000), 'bekleme süresi 30 saniye');
+  assert.equal(logs.filter((m) => m.includes('denemesi')).length, 2);
+  assert.deepEqual(reports, [{ source: 'harem', requested: 1, received: 1 }]);
+});
+
+test('Harem: ilk denemede gelirse yeniden denenmez', async () => {
+  let n = 0;
+  const haremQuotes = async () => (++n, haremOk);
+  await createPriceFeed({ yahoo: fakeYahoo(), haremQuotes, now: () => NOW }).getQuotes(['GRAM_ALTIN']);
+  assert.equal(n, 1);
+});
+
+test('Harem: 3 deneme de başarısızsa null döner (fazladan deneme yok) ve kaynak "cevap yok" bildirilir', async () => {
+  let n = 0;
+  const logs = [];
+  const reports = [];
+  const haremQuotes = async () => {
+    n += 1;
+    throw new Error('soket kapandı');
+  };
+  const feed = createPriceFeed({ yahoo: fakeYahoo(), haremQuotes, now: () => NOW, haremRetryDelayMs: 0, log: (m) => logs.push(m), onSource: (r) => reports.push(r) });
+  assert.equal((await feed.getQuotes(['GRAM_ALTIN'])).get('GRAM_ALTIN'), null);
+  assert.equal(n, 3);
+  assert.ok(logs.some((m) => m.includes('3 denemeden sonra')));
+  assert.deepEqual(reports, [{ source: 'harem', requested: 1, received: 0 }]);
+});
+
+test('onSource: Yahoo için istenen ve gelen sembol sayısı; takip kodu çökerse fiyat akışı etkilenmez', async () => {
+  const yahoo = fakeYahoo({ quotes: { 'BIMAS.IS': { regularMarketPrice: 380, marketState: 'REGULAR' } } });
+  const reports = [];
+  await createPriceFeed({ yahoo, now: () => NOW, onSource: (r) => reports.push(r) }).getQuotes(['BIMAS', 'ASELS']);
+  assert.deepEqual(reports, [{ source: 'yahoo', requested: 2, received: 1 }]);
+
+  const quotes = await createPriceFeed({
+    yahoo,
+    now: () => NOW,
+    onSource: () => {
+      throw new Error('takip bozuk');
+    },
+  }).getQuotes(['BIMAS']);
+  assert.equal(quotes.get('BIMAS').price, 380);
 });

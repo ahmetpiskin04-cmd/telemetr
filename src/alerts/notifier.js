@@ -59,7 +59,7 @@ export function createNotifier({ desktop, env = process.env, fetchImpl = fetch, 
     const telegram = settings.telegramEnabled === false ? null : getTelegramConfig(env);
     if (telegram) {
       try {
-        const prefix = kind === 'info' ? 'ℹ️' : '🔔';
+        const prefix = kind === 'info' ? 'ℹ️' : kind === 'warning' ? '⚠️' : '🔔';
         await sendTelegram({ ...telegram, text: `${prefix} ${title}\n${text}` }, { fetchImpl, retryDelayMs });
         result.telegram = true;
       } catch (err) {
