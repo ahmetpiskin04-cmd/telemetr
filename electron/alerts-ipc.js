@@ -6,7 +6,8 @@ import path from 'node:path';
 import { createAlertService } from '../src/alerts/service.js';
 import { registerHandlers } from './ipc.js';
 
-const ICON = path.resolve(import.meta.dirname, '..', 'build', 'icon.png');
+const BUILD = path.resolve(import.meta.dirname, '..', 'build');
+const NOTIFY_ICON = [path.join(BUILD, 'notification.png'), path.join(BUILD, 'icon.png')].find((f) => existsSync(f));
 
 const assertString = (value, label) => {
   if (typeof value !== 'string' || value.length === 0 || value.length > 100) throw new Error(`${label} geçersiz`);
@@ -24,7 +25,7 @@ const broadcast = (channel, payload) => {
 export function registerAlertsIpc({ allowedOrigin, db, onNotifyClick = () => {} }) {
   const desktop = async ({ title, body }) => {
     if (!Notification.isSupported()) throw new Error('Bu sistemde masaüstü bildirimi desteklenmiyor');
-    const notification = new Notification({ title, body, icon: existsSync(ICON) ? ICON : undefined });
+    const notification = new Notification({ title, body, icon: NOTIFY_ICON });
     notification.on('click', onNotifyClick);
     notification.show();
   };

@@ -21,6 +21,22 @@ const SVG = `
   <rect x="158" y="124" width="40" height="62" rx="8" fill="#0d0d0d"/>
 </svg>`;
 
+// Bildirim logosu: Windows bunu ~48 px'e küçültür; kare tam dolu ve mumlar büyük olunca net kalır
+const NOTIFY_SVG = `
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="36" fill="#f0efec"/>
+  <g transform="translate(96 96) scale(1.02) translate(-128 -128)">
+    <g stroke="#0d0d0d" stroke-width="12" stroke-linecap="round">
+      <line x1="78" y1="70" x2="78" y2="196"/>
+      <line x1="128" y1="46" x2="128" y2="168"/>
+      <line x1="178" y1="96" x2="178" y2="210"/>
+    </g>
+    <rect x="58" y="104" width="40" height="66" rx="8" fill="#f0efec" stroke="#0d0d0d" stroke-width="12"/>
+    <rect x="108" y="70" width="40" height="72" rx="8" fill="#0d0d0d"/>
+    <rect x="158" y="124" width="40" height="62" rx="8" fill="#0d0d0d"/>
+  </g>
+</svg>`;
+
 /** PNG'leri gömülü .ico (Windows Vista+ PNG içeren ICO'yu destekler). */
 function toIco(images) {
   const header = Buffer.alloc(6);
@@ -50,7 +66,13 @@ app.whenReady().then(async () => {
   const captured = await win.webContents.capturePage();
   const base = captured.resize({ width: 256, height: 256, quality: 'best' }); // ekran ölçeğinden bağımsız
 
+  const notifyWin = new BrowserWindow({ width: 192, height: 192, show: false, frame: false, transparent: true, useContentSize: true });
+  await notifyWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`<html><body style="margin:0;background:transparent;overflow:hidden">${NOTIFY_SVG}</body></html>`)}`);
+  await new Promise((r) => setTimeout(r, 400));
+  const notify = (await notifyWin.webContents.capturePage()).resize({ width: 192, height: 192, quality: 'best' });
+
   await mkdir(OUT, { recursive: true });
+  await writeFile(path.join(OUT, 'notification.png'), notify.toPNG());
   const images = SIZES.map((size) => ({ size, png: (size === 256 ? base : base.resize({ width: size, height: size, quality: 'best' })).toPNG() }));
   await writeFile(path.join(OUT, 'icon.png'), images[0].png);
   await writeFile(path.join(OUT, 'icon.ico'), toIco(images));

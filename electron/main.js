@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, shell } from 'electron';
+import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -143,8 +144,19 @@ function showMainWindow() {
   win.focus();
 }
 
+/** Windows bildirim başlığı kısayol/exe adına bakar (geliştirme kipinde "Electron"); kayıtla "Telemetr" ve logo gelir. */
+function registerToastIdentity() {
+  if (process.platform !== 'win32' || process.env.FINANS_NO_AUTOSTART) return;
+  const key = 'HKCU\Software\Classes\AppUserModelId\com.telemetr.app';
+  const logo = path.join(ROOT, 'build', 'notification.png');
+  const add = (name, value) => execFile('reg', ['add', key, '/v', name, '/t', 'REG_SZ', '/d', value, '/f'], { windowsHide: true }, () => {});
+  add('DisplayName', 'Telemetr');
+  if (existsSync(logo)) add('IconUri', logo);
+}
+
 app.whenReady().then(() => {
   app.setAppUserModelId('com.telemetr.app'); // Windows bildirimlerinin uygulama adıyla görünmesi için
+  registerToastIdentity();
   const allowedOrigin = DEV_URL ? new URL(DEV_URL).origin : 'file://';
   const { startSyncLoop, db } = registerIpc({ allowedOrigin });
   const alerts = registerAlertsIpc({ allowedOrigin, db, onNotifyClick: showMainWindow });
