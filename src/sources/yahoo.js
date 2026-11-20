@@ -42,5 +42,6 @@ export async function fetchDailyBars(symbol, { from, client = defaultYahooClient
     rows: [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date)),
     name: result.meta.longName ?? result.meta.shortName ?? null,
     currency: result.meta.currency ?? null,
+    timeZone,
   };
 }
