@@ -6,6 +6,8 @@ import path from 'node:path';
 import './paths.js'; // ipc.js'ten önce: paketli sürümde veri yollarını ortam değişkenine yazar
 import { registerIpc } from './ipc.js';
 import { registerAlertsIpc } from './alerts-ipc.js';
+import { createTray } from './tray.js';
+import { ensureDefaultAutostart, isAutostartEnabled, loginItemOptions, setAutostart, startedHidden } from './background.js';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const DEV_URL = process.env.VITE_DEV_SERVER_URL;
@@ -20,6 +22,7 @@ if (!process.env.FINANS_SCREENSHOT && !app.requestSingleInstanceLock()) {
     const [win] = BrowserWindow.getAllWindows();
     if (win) {
       if (win.isMinimized()) win.restore();
+      win.show(); // tepsiye küçültülmüşse geri getir
       win.focus();
     }
   });
@@ -32,6 +35,14 @@ if (envFile) process.loadEnvFile(envFile);
 
 // Geliştirme yardımcısı: FINANS_WINDOW=1280x760 ile pencere boyutunu zorla (dar ekran testi)
 const [winWidth, winHeight] = (process.env.FINANS_WINDOW ?? '1680x980').split('x').map(Number);
+
+// Arka plan modu: pencere kapanınca tepsiye küçülür, Windows girişinde pencere açmadan başlar.
+// Geliştirme sunucusunda (npm run dev), ekran görüntüsü modunda ve FINANS_BACKGROUND=0 ile kapalı.
+const BACKGROUND = !DEV_URL && !process.env.FINANS_SCREENSHOT && process.env.FINANS_BACKGROUND !== '0';
+let quitting = false;
+let hiddenStart = BACKGROUND && startedHidden(process.argv);
+let tray = null;
+let hiddenNoticeShown = false;
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -52,7 +63,24 @@ function createWindow() {
     },
   });
 
-  win.once('ready-to-show', () => win.show());
+  win.once('ready-to-show', () => {
+    if (!hiddenStart) win.show();
+    hiddenStart = false; // sonraki pencereler (tepsiden açılış) normal gösterilir
+  });
+
+  // Kapat düğmesi çıkış değil, tepsiye küçültme: alarm kontrolü sürsün. Gerçek çıkış tepsi menüsünden.
+  win.on('close', (event) => {
+    if (!BACKGROUND || quitting) return;
+    event.preventDefault();
+    win.hide();
+    if (tray && !hiddenNoticeShown) {
+      hiddenNoticeShown = true;
+      tray.displayBalloon?.({ title: 'Telemetr arka planda çalışıyor', content: 'Alarmlar kontrol edilmeye devam eder. Çıkmak için tepsi simgesine sağ tıklayın.' });
+    }
+  });
+  win.on('session-end', () => {
+    quitting = true; // Windows kapanırken pencere çıkışı engellemesin
+  });
 
   // Uygulama içinde başka sayfaya gidilmesin; http(s) bağlantıları sistem tarayıcısında açılır.
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -123,7 +151,27 @@ app.whenReady().then(() => {
   createWindow();
   startSyncLoop(SYNC_MINUTES);
   if (ALERTS_ENABLED) alerts.start();
-  app.on('before-quit', () => alerts.stop());
+  app.on('before-quit', () => {
+    quitting = true;
+    alerts.stop();
+  });
+
+  if (BACKGROUND) {
+    const loginOptions = loginItemOptions({ app });
+    // İlk çalıştırmada Windows girişinde başlama açılır; sonra yalnızca kullanıcının tepsi seçimi geçerli.
+    // FINANS_NO_AUTOSTART=1 (testler) kayıt defterine hiç dokunmaz.
+    if (!process.env.FINANS_NO_AUTOSTART) {
+      ensureDefaultAutostart({ app, markerFile: path.join(app.getPath('userData'), 'autostart-initialized'), options: loginOptions });
+    }
+    tray = createTray({
+      iconPath: ICON,
+      onOpen: showMainWindow,
+      onCheckNow: () => alerts.runNow(),
+      getAutostart: () => isAutostartEnabled(app, loginOptions),
+      setAutostartTo: (enabled) => setAutostart(app, enabled, loginOptions),
+      onQuit: () => app.quit(),
+    });
+  }
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
