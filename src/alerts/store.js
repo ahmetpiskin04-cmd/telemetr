@@ -29,7 +29,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   telegramEnabled: true, // token/chat id ortam değişkenlerinde yoksa kendiliğinden atlanır
 });
 
-const freshState = () => ({ initialized: false, armed: null, stage: null, lastValue: null, lastCheckedAt: null });
+const freshState = () => ({ initialized: false, armed: null, stage: null, notifiedStage: null, lastValue: null, lastCheckedAt: null });
 
 const fail = (message) => {
   throw new Error(message);
